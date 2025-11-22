@@ -27,7 +27,7 @@ class PaymentsEngine:
     def process_file(self, filepath: str) -> Dict[int, ClientAccount]:
         """Process CSV file and return final account states."""
 
-        # Phase 1: Main Processing (multi-threaded)
+        # Phase 1: Main Processing (multithreaded)
         logger.info("Starting main processing phase")
 
         publisher = threading.Thread(target=self._publish, args=(filepath,))

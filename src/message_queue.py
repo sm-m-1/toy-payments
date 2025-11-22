@@ -1,5 +1,5 @@
-import queue
 import threading
+from queue import Queue, Empty
 from typing import Optional, List
 
 from models import Transaction
@@ -12,8 +12,8 @@ class InMemoryQueue:
     """
 
     def __init__(self):
-        self._main_queue: queue.Queue[Transaction] = queue.Queue()
-        self._dlq: queue.Queue[Transaction] = queue.Queue()
+        self._main_queue: Queue[Transaction] = Queue()
+        self._dlq: Queue[Transaction] = Queue()
         self._shutdown = threading.Event()
 
     def publish(self, message: Transaction) -> None:
@@ -28,7 +28,7 @@ class InMemoryQueue:
         """
         try:
             return self._main_queue.get(timeout=timeout)
-        except queue.Empty:
+        except Empty:
             return None
 
     def is_empty(self) -> bool:
@@ -48,7 +48,7 @@ class InMemoryQueue:
         while True:
             try:
                 messages.append(self._dlq.get_nowait())
-            except queue.Empty:
+            except Empty:
                 break
         return messages
 

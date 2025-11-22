@@ -8,6 +8,15 @@ A transaction processing engine with publisher-consumer architecture and DLQ sup
 python src/main.py input.csv > output.csv
 ```
 
+### Example
+
+```bash
+$ python src/main.py tests/fixtures/basic.csv
+client,available,held,total,locked
+1,1.5,0,1.5,false
+2,2,0,2,false
+```
+
 ## Input Format
 
 ```csv
