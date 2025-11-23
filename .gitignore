@@ -1,3 +1,4 @@
 .venv
 .idea
 /plans
+output.csv
