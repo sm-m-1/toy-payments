@@ -39,3 +39,20 @@ class ClientAccount:
     @property
     def total(self) -> Decimal:
         return self.available + self.held
+
+    def credit(self, amount: Decimal) -> None:
+        self.available += amount
+
+    def debit(self, amount: Decimal) -> None:
+        self.available -= amount
+
+    def hold(self, amount: Decimal) -> None:
+        self.available -= amount
+        self.held += amount
+
+    def release_hold(self, amount: Decimal) -> None:
+        self.held -= amount
+        self.available += amount
+
+    def remove_held(self, amount: Decimal) -> None:
+        self.held -= amount
