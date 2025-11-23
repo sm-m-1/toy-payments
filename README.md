@@ -59,7 +59,7 @@ pytest tests/ -v
 
 - **Unit tests** for `TransactionProcessor` cover each transaction type and edge cases (wrong client, insufficient funds, frozen account)
 - **Integration tests** for `PaymentsEngine` verify end-to-end processing including DLQ retry for out-of-order transactions
-- **Edge case tests** cover: duplicate disputes, disputes on withdrawals (rejected), chargeback after resolve (rejected), re-dispute after resolve, partial withdrawal then dispute
+- **Edge case tests** cover: duplicate deposits/withdrawals (idempotent), negative/zero amounts (rejected), duplicate disputes, disputes on withdrawals (rejected), chargeback after resolve (rejected), re-dispute after resolve, partial withdrawal then dispute
 - **Large scale tests** with 1000 accounts and 6000 transactions verify correctness under concurrent processing with 10 consumer threads
 - All tests use inline CSV data with precise expected values for deterministic verification
 
