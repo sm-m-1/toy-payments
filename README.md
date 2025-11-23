@@ -117,4 +117,4 @@ Core components (`InMemoryQueue`, `StateManager`, `TransactionProcessor`) requir
 
 ## Development Notes
 
-I built the toy payments engine using Claude Code AI for assistance with boilerplate code and tests. Claude generated the initial boilerplate code for processing transactions from CSV file. I enhanced it with a publisher-consumer architecture and Dead Letter Queue (DLQ) for out-of-order transactions.
+I built the toy payments engine using Claude Code AI for assistance with boilerplate code and tests. Claude generated the initial boilerplate code for reading transactions from CSV file. I enhanced it with a publisher-consumer architecture and implemented correct processing logic.
