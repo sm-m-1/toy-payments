@@ -1,10 +1,11 @@
 import csv
 import logging
+import sys
 import threading
 from decimal import Decimal
 from typing import Dict, Optional, List
 
-from models import Transaction, TransactionType, ClientAccount, ProcessingResult
+from models import Transaction, TransactionType, ClientAccount, ProcessingResult, ProcessingStats
 from message_queue import InMemoryQueue
 from state_manager import StateManager
 from transaction_processor import TransactionProcessor
@@ -23,6 +24,7 @@ class PaymentsEngine:
         self._queue = InMemoryQueue()
         self._state = StateManager()
         self._processor = TransactionProcessor(self._state)
+        self._stats = ProcessingStats()
 
     def process_file(self, filepath: str) -> Dict[int, ClientAccount]:
         """Process CSV file and return final account states."""
@@ -52,6 +54,14 @@ class PaymentsEngine:
             logger.info(f"Retrying {len(dead_letter_queue_messages)} messages from dead letter queue")
             self._process_dead_letter_queue(dead_letter_queue_messages)
 
+        # Print final processing report to stderr
+        print(
+            f"Processed: {self._stats.processed}, "
+            f"Failed: {self._stats.failed}, "
+            f"DLQ retried: {self._stats.dlq_retried}",
+            file=sys.stderr
+        )
+
         return self._state.get_all_accounts()
 
     def _publish_transactions(self, filepath: str) -> None:
@@ -76,7 +86,11 @@ class PaymentsEngine:
             with lock:
                 result = self._processor.process_transaction(transaction)
 
-            if result == ProcessingResult.FAILED_RETRIABLE:
+            if result == ProcessingResult.SUCCESS:
+                self._stats.record_success()
+            elif result == ProcessingResult.FAILED_PERMANENT:
+                self._stats.record_failure()
+            elif result == ProcessingResult.FAILED_RETRIABLE:
                 self._queue.send_to_dead_letter_queue(transaction)
 
     def _process_dead_letter_queue(self, messages: List[Transaction]) -> None:
@@ -87,14 +101,19 @@ class PaymentsEngine:
         still_failed = []
 
         for transaction in messages:
+            self._stats.record_dlq_retry()
+
             lock = self._state.get_client_lock(transaction.client_id)
             with lock:
                 result = self._processor.process_transaction(transaction)
 
-            if result == ProcessingResult.FAILED_RETRIABLE:
-                still_failed.append(transaction)
+            if result == ProcessingResult.SUCCESS:
+                self._stats.record_success()
             elif result == ProcessingResult.FAILED_PERMANENT:
+                self._stats.record_failure()
                 logger.warning(f"Dead letter queue message permanently failed: {transaction}")
+            elif result == ProcessingResult.FAILED_RETRIABLE:
+                still_failed.append(transaction)
 
         if still_failed:
             logger.warning(f"{len(still_failed)} messages still failed after dead letter queue retry")

@@ -280,3 +280,82 @@ class TestPaymentsEngine:
         assert accounts[1].held == Decimal("0")
         assert accounts[1].total == Decimal("0")
         assert accounts[1].locked is True
+
+    def test_negative_deposit_rejected(self, tmp_path):
+        """Deposit with negative amount should be rejected."""
+        csv_file = tmp_path / "test.csv"
+        csv_file.write_text('\n'.join([
+            "type, client, tx, amount",
+            "deposit, 1, 1, -100.0",
+            "deposit, 1, 2, 50.0",
+        ]))
+
+        engine = PaymentsEngine(num_consumers=2)
+        accounts = engine.process_file(str(csv_file))
+
+        # Negative deposit rejected, only 50 deposited
+        assert accounts[1].available == Decimal("50")
+        assert accounts[1].total == Decimal("50")
+
+    def test_zero_deposit_rejected(self, tmp_path):
+        """Deposit with zero amount should be rejected."""
+        csv_file = tmp_path / "test.csv"
+        csv_file.write_text('\n'.join([
+            "type, client, tx, amount",
+            "deposit, 1, 1, 0",
+            "deposit, 1, 2, 100.0",
+        ]))
+
+        engine = PaymentsEngine(num_consumers=2)
+        accounts = engine.process_file(str(csv_file))
+
+        # Zero deposit rejected, only 100 deposited
+        assert accounts[1].available == Decimal("100")
+
+    def test_negative_withdrawal_rejected(self, tmp_path):
+        """Withdrawal with negative amount should be rejected."""
+        csv_file = tmp_path / "test.csv"
+        csv_file.write_text('\n'.join([
+            "type, client, tx, amount",
+            "deposit, 1, 1, 100.0",
+            "withdrawal, 1, 2, -50.0",
+        ]))
+
+        engine = PaymentsEngine(num_consumers=2)
+        accounts = engine.process_file(str(csv_file))
+
+        # Negative withdrawal rejected, balance unchanged
+        assert accounts[1].available == Decimal("100")
+
+    def test_duplicate_deposit_idempotent(self, tmp_path):
+        """Duplicate deposit with same tx_id should be skipped (idempotent)."""
+        csv_file = tmp_path / "test.csv"
+        csv_file.write_text('\n'.join([
+            "type, client, tx, amount",
+            "deposit, 1, 1, 100.0",
+            "deposit, 1, 1, 100.0",
+            "deposit, 1, 1, 100.0",
+        ]))
+
+        engine = PaymentsEngine(num_consumers=2)
+        accounts = engine.process_file(str(csv_file))
+
+        # Only first deposit processed, duplicates skipped
+        assert accounts[1].available == Decimal("100")
+
+    def test_duplicate_withdrawal_idempotent(self, tmp_path):
+        """Duplicate withdrawal with same tx_id should be skipped (idempotent)."""
+        csv_file = tmp_path / "test.csv"
+        csv_file.write_text('\n'.join([
+            "type, client, tx, amount",
+            "deposit, 1, 1, 200.0",
+            "withdrawal, 1, 2, 50.0",
+            "withdrawal, 1, 2, 50.0",
+            "withdrawal, 1, 2, 50.0",
+        ]))
+
+        engine = PaymentsEngine(num_consumers=2)
+        accounts = engine.process_file(str(csv_file))
+
+        # Deposit 200, only first withdrawal processed (50), duplicates skipped
+        assert accounts[1].available == Decimal("150")

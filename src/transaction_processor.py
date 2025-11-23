@@ -45,11 +45,27 @@ class TransactionProcessor:
                 return ProcessingResult.FAILED_PERMANENT
 
     def _handle_deposit(self, account: ClientAccount, transaction: Transaction) -> ProcessingResult:
+        if transaction.amount is None or transaction.amount <= 0:
+            logger.warning(f"Deposit tx {transaction.transaction_id}: invalid amount {transaction.amount}")
+            return ProcessingResult.FAILED_PERMANENT
+
+        if self._state.get_transaction(transaction.transaction_id) is not None:
+            logger.info(f"Deposit tx {transaction.transaction_id}: already processed, skipping (idempotent)")
+            return ProcessingResult.SUCCESS
+
         account.credit(transaction.amount)
         self._state.store_transaction(transaction)
         return ProcessingResult.SUCCESS
 
     def _handle_withdrawal(self, account: ClientAccount, transaction: Transaction) -> ProcessingResult:
+        if transaction.amount is None or transaction.amount <= 0:
+            logger.warning(f"Withdrawal tx {transaction.transaction_id}: invalid amount {transaction.amount}")
+            return ProcessingResult.FAILED_PERMANENT
+
+        if self._state.get_transaction(transaction.transaction_id) is not None:
+            logger.info(f"Withdrawal tx {transaction.transaction_id}: already processed, skipping (idempotent)")
+            return ProcessingResult.SUCCESS
+
         if account.available >= transaction.amount:
             account.debit(transaction.amount)
             self._state.store_transaction(transaction)
