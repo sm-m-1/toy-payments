@@ -24,6 +24,14 @@ client,available,held,total,locked
 1,50,0,50,false
 ```
 
+## Correctness
+
+- **Unit tests** for `TransactionProcessor` cover each transaction type and edge cases (wrong client, insufficient funds, frozen account)
+- **Integration tests** for `PaymentsEngine` verify end-to-end processing including DLQ retry for out-of-order transactions
+- **Edge case tests** cover: duplicate disputes, disputes on withdrawals (rejected), chargeback after resolve (rejected), re-dispute after resolve, partial withdrawal then dispute
+- **Large scale tests** with 1000 accounts and 6000 transactions verify correctness under concurrent processing with 10 consumer threads
+- All tests use inline CSV data with precise expected values for deterministic verification
+
 ## Running Tests
 
 **Option 1: Virtual environment**
@@ -39,14 +47,6 @@ pytest tests/ -v
 pipx install pytest
 pytest tests/ -v
 ```
-
-## Correctness
-
-- **Unit tests** for `TransactionProcessor` cover each transaction type and edge cases (wrong client, insufficient funds, frozen account)
-- **Integration tests** for `PaymentsEngine` verify end-to-end processing including DLQ retry for out-of-order transactions
-- **Edge case tests** cover: duplicate disputes, disputes on withdrawals (rejected), chargeback after resolve (rejected), re-dispute after resolve, partial withdrawal then dispute
-- **Large scale tests** with 1000 accounts and 6000 transactions verify correctness under concurrent processing with 10 consumer threads
-- All tests use inline CSV data with precise expected values for deterministic verification
 
 ## Extensibility
 
