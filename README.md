@@ -82,3 +82,7 @@ def receive_transaction():
 ```
 
 Core components (`InMemoryQueue`, `StateManager`, `TransactionProcessor`) require no changes.
+
+## Development Notes
+
+Built with Claude Code assistance. Claude generated the initial implementation for processing transactions from CSV and outputting account states to CSV. I then enhanced it with a publisher-consumer architecture and Dead Letter Queue (DLQ) for handling out-of-order transactions. I did multiple iterations of cleanup and refinements.
