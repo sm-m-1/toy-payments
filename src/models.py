@@ -20,13 +20,13 @@ class ProcessingResult(Enum):
 
 @dataclass
 class Transaction:
-    tx_type: TransactionType
+    transaction_type: TransactionType
     client_id: int
-    tx_id: int
+    transaction_id: int
     amount: Optional[Decimal] = None
 
     def __repr__(self) -> str:
-        return f"Transaction({self.tx_type.value}, client={self.client_id}, tx={self.tx_id}, amount={self.amount})"
+        return f"Transaction({self.transaction_type.value}, client={self.client_id}, tx={self.transaction_id}, amount={self.amount})"
 
 
 @dataclass

@@ -9,24 +9,24 @@ from models import Transaction, TransactionType, ClientAccount, ProcessingResult
 
 class TestTransaction:
     def test_create_deposit(self):
-        tx = Transaction(
-            tx_type=TransactionType.DEPOSIT,
+        transaction = Transaction(
+            transaction_type=TransactionType.DEPOSIT,
             client_id=1,
-            tx_id=1,
+            transaction_id=1,
             amount=Decimal("100.0"),
         )
-        assert tx.tx_type == TransactionType.DEPOSIT
-        assert tx.client_id == 1
-        assert tx.tx_id == 1
-        assert tx.amount == Decimal("100.0")
+        assert transaction.transaction_type == TransactionType.DEPOSIT
+        assert transaction.client_id == 1
+        assert transaction.transaction_id == 1
+        assert transaction.amount == Decimal("100.0")
 
     def test_create_dispute_no_amount(self):
-        tx = Transaction(
-            tx_type=TransactionType.DISPUTE,
+        transaction = Transaction(
+            transaction_type=TransactionType.DISPUTE,
             client_id=1,
-            tx_id=1,
+            transaction_id=1,
         )
-        assert tx.amount is None
+        assert transaction.amount is None
 
 
 class TestClientAccount:

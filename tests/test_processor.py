@@ -15,8 +15,8 @@ class TestTransactionProcessor:
         self.processor = TransactionProcessor(self.state)
 
     def test_deposit(self):
-        tx = Transaction(TransactionType.DEPOSIT, client_id=1, tx_id=1, amount=Decimal("100"))
-        result = self.processor.process(tx)
+        transaction = Transaction(TransactionType.DEPOSIT, client_id=1, transaction_id=1, amount=Decimal("100"))
+        result = self.processor.process_transaction(transaction)
 
         assert result == ProcessingResult.SUCCESS
         account = self.state.get_or_create_account(1)
@@ -24,33 +24,33 @@ class TestTransactionProcessor:
         assert account.total == Decimal("100")
 
     def test_withdrawal_success(self):
-        deposit = Transaction(TransactionType.DEPOSIT, client_id=1, tx_id=1, amount=Decimal("100"))
-        self.processor.process(deposit)
+        deposit = Transaction(TransactionType.DEPOSIT, client_id=1, transaction_id=1, amount=Decimal("100"))
+        self.processor.process_transaction(deposit)
 
-        withdrawal = Transaction(TransactionType.WITHDRAWAL, client_id=1, tx_id=2, amount=Decimal("60"))
-        result = self.processor.process(withdrawal)
+        withdrawal = Transaction(TransactionType.WITHDRAWAL, client_id=1, transaction_id=2, amount=Decimal("60"))
+        result = self.processor.process_transaction(withdrawal)
 
         assert result == ProcessingResult.SUCCESS
         account = self.state.get_or_create_account(1)
         assert account.available == Decimal("40")
 
     def test_withdrawal_insufficient_funds(self):
-        deposit = Transaction(TransactionType.DEPOSIT, client_id=1, tx_id=1, amount=Decimal("50"))
-        self.processor.process(deposit)
+        deposit = Transaction(TransactionType.DEPOSIT, client_id=1, transaction_id=1, amount=Decimal("50"))
+        self.processor.process_transaction(deposit)
 
-        withdrawal = Transaction(TransactionType.WITHDRAWAL, client_id=1, tx_id=2, amount=Decimal("100"))
-        result = self.processor.process(withdrawal)
+        withdrawal = Transaction(TransactionType.WITHDRAWAL, client_id=1, transaction_id=2, amount=Decimal("100"))
+        result = self.processor.process_transaction(withdrawal)
 
         assert result == ProcessingResult.FAILED_PERMANENT
         account = self.state.get_or_create_account(1)
         assert account.available == Decimal("50")
 
     def test_dispute(self):
-        deposit = Transaction(TransactionType.DEPOSIT, client_id=1, tx_id=1, amount=Decimal("100"))
-        self.processor.process(deposit)
+        deposit = Transaction(TransactionType.DEPOSIT, client_id=1, transaction_id=1, amount=Decimal("100"))
+        self.processor.process_transaction(deposit)
 
-        dispute = Transaction(TransactionType.DISPUTE, client_id=1, tx_id=1)
-        result = self.processor.process(dispute)
+        dispute = Transaction(TransactionType.DISPUTE, client_id=1, transaction_id=1)
+        result = self.processor.process_transaction(dispute)
 
         assert result == ProcessingResult.SUCCESS
         account = self.state.get_or_create_account(1)
@@ -58,28 +58,28 @@ class TestTransactionProcessor:
         assert account.held == Decimal("100")
         assert account.total == Decimal("100")
 
-    def test_dispute_tx_not_found(self):
-        dispute = Transaction(TransactionType.DISPUTE, client_id=1, tx_id=99)
-        result = self.processor.process(dispute)
+    def test_dispute_transaction_not_found(self):
+        dispute = Transaction(TransactionType.DISPUTE, client_id=1, transaction_id=99)
+        result = self.processor.process_transaction(dispute)
         assert result == ProcessingResult.FAILED_RETRIABLE
 
     def test_dispute_wrong_client(self):
-        deposit = Transaction(TransactionType.DEPOSIT, client_id=1, tx_id=1, amount=Decimal("100"))
-        self.processor.process(deposit)
+        deposit = Transaction(TransactionType.DEPOSIT, client_id=1, transaction_id=1, amount=Decimal("100"))
+        self.processor.process_transaction(deposit)
 
-        dispute = Transaction(TransactionType.DISPUTE, client_id=2, tx_id=1)
-        result = self.processor.process(dispute)
+        dispute = Transaction(TransactionType.DISPUTE, client_id=2, transaction_id=1)
+        result = self.processor.process_transaction(dispute)
         assert result == ProcessingResult.FAILED_PERMANENT
 
     def test_resolve(self):
-        deposit = Transaction(TransactionType.DEPOSIT, client_id=1, tx_id=1, amount=Decimal("100"))
-        self.processor.process(deposit)
+        deposit = Transaction(TransactionType.DEPOSIT, client_id=1, transaction_id=1, amount=Decimal("100"))
+        self.processor.process_transaction(deposit)
 
-        dispute = Transaction(TransactionType.DISPUTE, client_id=1, tx_id=1)
-        self.processor.process(dispute)
+        dispute = Transaction(TransactionType.DISPUTE, client_id=1, transaction_id=1)
+        self.processor.process_transaction(dispute)
 
-        resolve = Transaction(TransactionType.RESOLVE, client_id=1, tx_id=1)
-        result = self.processor.process(resolve)
+        resolve = Transaction(TransactionType.RESOLVE, client_id=1, transaction_id=1)
+        result = self.processor.process_transaction(resolve)
 
         assert result == ProcessingResult.SUCCESS
         account = self.state.get_or_create_account(1)
@@ -87,22 +87,22 @@ class TestTransactionProcessor:
         assert account.held == Decimal("0")
 
     def test_resolve_not_disputed(self):
-        deposit = Transaction(TransactionType.DEPOSIT, client_id=1, tx_id=1, amount=Decimal("100"))
-        self.processor.process(deposit)
+        deposit = Transaction(TransactionType.DEPOSIT, client_id=1, transaction_id=1, amount=Decimal("100"))
+        self.processor.process_transaction(deposit)
 
-        resolve = Transaction(TransactionType.RESOLVE, client_id=1, tx_id=1)
-        result = self.processor.process(resolve)
+        resolve = Transaction(TransactionType.RESOLVE, client_id=1, transaction_id=1)
+        result = self.processor.process_transaction(resolve)
         assert result == ProcessingResult.FAILED_RETRIABLE
 
     def test_chargeback(self):
-        deposit = Transaction(TransactionType.DEPOSIT, client_id=1, tx_id=1, amount=Decimal("100"))
-        self.processor.process(deposit)
+        deposit = Transaction(TransactionType.DEPOSIT, client_id=1, transaction_id=1, amount=Decimal("100"))
+        self.processor.process_transaction(deposit)
 
-        dispute = Transaction(TransactionType.DISPUTE, client_id=1, tx_id=1)
-        self.processor.process(dispute)
+        dispute = Transaction(TransactionType.DISPUTE, client_id=1, transaction_id=1)
+        self.processor.process_transaction(dispute)
 
-        chargeback = Transaction(TransactionType.CHARGEBACK, client_id=1, tx_id=1)
-        result = self.processor.process(chargeback)
+        chargeback = Transaction(TransactionType.CHARGEBACK, client_id=1, transaction_id=1)
+        result = self.processor.process_transaction(chargeback)
 
         assert result == ProcessingResult.SUCCESS
         account = self.state.get_or_create_account(1)
@@ -112,13 +112,13 @@ class TestTransactionProcessor:
         assert account.locked is True
 
     def test_frozen_account_rejects_operations(self):
-        deposit = Transaction(TransactionType.DEPOSIT, client_id=1, tx_id=1, amount=Decimal("100"))
-        self.processor.process(deposit)
-        dispute = Transaction(TransactionType.DISPUTE, client_id=1, tx_id=1)
-        self.processor.process(dispute)
-        chargeback = Transaction(TransactionType.CHARGEBACK, client_id=1, tx_id=1)
-        self.processor.process(chargeback)
+        deposit = Transaction(TransactionType.DEPOSIT, client_id=1, transaction_id=1, amount=Decimal("100"))
+        self.processor.process_transaction(deposit)
+        dispute = Transaction(TransactionType.DISPUTE, client_id=1, transaction_id=1)
+        self.processor.process_transaction(dispute)
+        chargeback = Transaction(TransactionType.CHARGEBACK, client_id=1, transaction_id=1)
+        self.processor.process_transaction(chargeback)
 
-        new_deposit = Transaction(TransactionType.DEPOSIT, client_id=1, tx_id=2, amount=Decimal("50"))
-        result = self.processor.process(new_deposit)
+        new_deposit = Transaction(TransactionType.DEPOSIT, client_id=1, transaction_id=2, amount=Decimal("50"))
+        result = self.processor.process_transaction(new_deposit)
         assert result == ProcessingResult.FAILED_PERMANENT

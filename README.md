@@ -48,3 +48,23 @@ pytest tests/ -v
 pipx install pytest
 pytest tests/ -v
 ```
+
+## Extensibility
+
+The publisher-consumer architecture decouples the data source from processing logic. The queue, consumers, and processor remain unchanged regardless of input source.
+
+**Current:** CSV file → Publisher → Queue → Consumers
+
+**Alternative:** Webhook endpoint → Queue → Consumers
+
+To add webhook support, only a new HTTP endpoint is needed:
+
+```python
+@app.route("/transaction", methods=["POST"])
+def receive_transaction():
+    tx = parse_request(request.json)
+    queue.publish(tx)  # Same queue interface
+    return {"status": "accepted"}
+```
+
+Core components (`InMemoryQueue`, `StateManager`, `TransactionProcessor`) require no changes.

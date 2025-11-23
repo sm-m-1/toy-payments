@@ -27,88 +27,88 @@ class PaymentsEngine:
     def process_file(self, filepath: str) -> Dict[int, ClientAccount]:
         """Process CSV file and return final account states."""
 
-        # Phase 1: Main Processing (multithreaded)
+        # Phase 1: Main Processing (1 publisher thread, N consumer threads)
         logger.info("Starting main processing phase")
 
-        publisher = threading.Thread(target=self._publish, args=(filepath,))
-        publisher.start()
+        publisher_thread = threading.Thread(target=self._publish_transactions, args=(filepath,))
+        publisher_thread.start()
 
-        consumers = []
+        consumer_threads = []
         for _ in range(self._num_consumers):
-            t = threading.Thread(target=self._consume)
-            t.start()
-            consumers.append(t)
+            consumer_thread = threading.Thread(target=self._consume_transactions)
+            consumer_thread.start()
+            consumer_threads.append(consumer_thread)
 
-        publisher.join()
+        publisher_thread.join()
         self._queue.shutdown()
-        for t in consumers:
-            t.join()
+        for consumer_thread in consumer_threads:
+            consumer_thread.join()
 
         logger.info("Main processing phase complete")
 
         # Phase 2: DLQ Retry (single-threaded)
-        dlq_messages = self._queue.get_dlq_messages()
-        if dlq_messages:
-            logger.info(f"Retrying {len(dlq_messages)} messages from DLQ")
-            self._process_dlq(dlq_messages)
+        dead_letter_queue_messages = self._queue.get_dead_letter_queue_messages()
+        if dead_letter_queue_messages:
+            logger.info(f"Retrying {len(dead_letter_queue_messages)} messages from dead letter queue")
+            self._process_dead_letter_queue(dead_letter_queue_messages)
 
         return self._state.get_all_accounts()
 
-    def _publish(self, filepath: str) -> None:
+    def _publish_transactions(self, filepath: str) -> None:
         """Read CSV and publish transactions to queue."""
         with open(filepath, "r") as f:
             reader = csv.DictReader(f)
             for row in reader:
-                tx = self._parse_row(row)
-                if tx:
-                    self._queue.publish(tx)
+                transaction = self._parse_csv_row(row)
+                if transaction:
+                    self._queue.publish_message(transaction)
 
-    def _consume(self) -> None:
+    def _consume_transactions(self) -> None:
         """Consumer loop: pull from queue, process, send failures to DLQ."""
         while True:
-            tx = self._queue.consume(timeout=0.1)
-            if tx is None:
+            transaction = self._queue.consume_message()
+            if transaction is None:
                 if self._queue.is_shutdown() and self._queue.is_empty():
                     break
                 continue
 
-            lock = self._state.get_client_lock(tx.client_id)
+            lock = self._state.get_client_lock(transaction.client_id)
             with lock:
-                result = self._processor.process(tx)
+                result = self._processor.process_transaction(transaction)
 
             if result == ProcessingResult.FAILED_RETRIABLE:
-                self._queue.send_to_dlq(tx)
+                self._queue.send_to_dead_letter_queue(transaction)
 
-    def _process_dlq(self, messages: List[Transaction]) -> None:
+    def _process_dead_letter_queue(self, messages: List[Transaction]) -> None:
         """
-        Process DLQ messages synchronously (single-threaded).
+        Process dead letter queue messages synchronously (single-threaded).
         This runs after main processing, so no race conditions.
         """
         still_failed = []
 
-        for tx in messages:
-            lock = self._state.get_client_lock(tx.client_id)
+        for transaction in messages:
+            lock = self._state.get_client_lock(transaction.client_id)
             with lock:
-                result = self._processor.process(tx)
+                result = self._processor.process_transaction(transaction)
 
             if result == ProcessingResult.FAILED_RETRIABLE:
-                still_failed.append(tx)
+                still_failed.append(transaction)
             elif result == ProcessingResult.FAILED_PERMANENT:
-                logger.warning(f"DLQ message permanently failed: {tx}")
+                logger.warning(f"Dead letter queue message permanently failed: {transaction}")
 
         if still_failed:
-            logger.warning(f"{len(still_failed)} messages still failed after DLQ retry")
-            for tx in still_failed:
-                logger.warning(f"  Discarding: {tx}")
+            logger.warning(f"{len(still_failed)} messages still failed after dead letter queue retry")
+            for transaction in still_failed:
+                logger.warning(f"  Discarding: {transaction}")
 
-    def _parse_row(self, row: Dict[str, str]) -> Optional[Transaction]:
+    def _parse_csv_row(self, row: Dict[str, str]) -> Optional[Transaction]:
         """Parse CSV row into Transaction."""
         try:
             normalized = {k.strip(): v.strip() for k, v in row.items()}
 
-            tx_type_str = normalized["type"].lower()
+            transaction_type_str = normalized["type"].lower()
             client_id = int(normalized["client"])
-            tx_id = int(normalized["tx"])
+            transaction_id = int(normalized["tx"])
 
             amount = None
             amount_str = normalized.get("amount", "")
@@ -116,9 +116,9 @@ class PaymentsEngine:
                 amount = Decimal(amount_str)
 
             return Transaction(
-                tx_type=TransactionType(tx_type_str),
+                transaction_type=TransactionType(transaction_type_str),
                 client_id=client_id,
-                tx_id=tx_id,
+                transaction_id=transaction_id,
                 amount=amount,
             )
         except (KeyError, ValueError) as e:
