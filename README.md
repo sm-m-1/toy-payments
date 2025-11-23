@@ -49,6 +49,43 @@ client,available,held,total,locked
 1,50,0,50,false
 ```
 
+## Architecture
+
+```
+                                    ┌─────────────────────────────────────────┐
+                                    │            PaymentsEngine               │
+                                    └─────────────────────────────────────────┘
+                                                       │
+        ┌──────────────────────────────────────────────┼──────────────────────────────────────────────┐
+        │                                              │                                              │
+        ▼                                              ▼                                              ▼
+┌───────────────┐                            ┌─────────────────┐                            ┌─────────────────┐
+│   Publisher   │                            │  InMemoryQueue  │                            │   Consumer(s)   │
+│   (1 thread)  │ ──── transactions ────▶    │                 │    ◀──── pull ────         │   (N threads)   │
+└───────────────┘                            │  ┌───────────┐  │                            └─────────────────┘
+        │                                    │  │    DLQ    │  │                                    │
+        │                                    │  └───────────┘  │                                    │
+   reads from                                └─────────────────┘                                    │
+        │                                            ▲                                              │
+        ▼                                            │                                              ▼
+┌───────────────┐                           retriable failures                         ┌─────────────────────┐
+│   CSV File    │                                                                      │TransactionProcessor │
+└───────────────┘                                                                      │                     │
+                                                                                       │  ┌───────────────┐  │
+                                                                                       │  │ StateManager  │  │
+                                                                                       │  │  (accounts,   │  │
+                                                                                       │  │  transactions,│  │
+                                                                                       │  │  locks)       │  │
+                                                                                       │  └───────────────┘  │
+                                                                                       └─────────────────────┘
+
+Processing Flow:
+1. Publisher reads CSV and pushes transactions to queue
+2. Consumers pull transactions and process via TransactionProcessor
+3. Retriable failures (e.g., out-of-order disputes) go to DLQ
+4. After main processing, DLQ messages are retried synchronously
+```
+
 ## Testing
 
 ```bash
