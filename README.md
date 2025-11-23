@@ -52,9 +52,9 @@ pytest tests/ -v
 
 The publisher-consumer architecture decouples the data source from processing logic. The queue, consumers, and processor remain unchanged regardless of input source.
 
-**Current:** CSV file → Publisher → Queue → Consumers
+**Current:** CSV file -> Publisher -> Queue -> Consumers
 
-**Alternative:** Webhook endpoint → Queue → Consumers
+**Alternative:** Webhook endpoint -> Queue -> Consumers
 
 To add webhook support, only a new HTTP endpoint is needed:
 
