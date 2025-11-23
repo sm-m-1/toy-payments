@@ -5,8 +5,8 @@ from decimal import Decimal
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from models import Transaction, TransactionType, ProcessingResult
-from state import StateManager
-from processor import TransactionProcessor
+from state_manager import StateManager
+from transaction_processor import TransactionProcessor
 
 
 class TestTransactionProcessor:

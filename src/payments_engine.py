@@ -6,8 +6,8 @@ from typing import Dict, Optional, List
 
 from models import Transaction, TransactionType, ClientAccount, ProcessingResult
 from message_queue import InMemoryQueue
-from state import StateManager
-from processor import TransactionProcessor
+from state_manager import StateManager
+from transaction_processor import TransactionProcessor
 
 logger = logging.getLogger(__name__)
 

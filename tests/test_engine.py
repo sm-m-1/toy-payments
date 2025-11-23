@@ -4,7 +4,7 @@ from decimal import Decimal
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from engine import PaymentsEngine
+from payments_engine import PaymentsEngine
 
 FIXTURES_DIR = os.path.join(os.path.dirname(__file__), "fixtures")
 

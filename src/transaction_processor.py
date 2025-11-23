@@ -1,5 +1,5 @@
 from models import Transaction, TransactionType, ClientAccount, ProcessingResult
-from state import StateManager
+from state_manager import StateManager
 
 
 class TransactionProcessor:
