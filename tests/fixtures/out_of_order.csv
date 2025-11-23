@@ -1,3 +1,0 @@
-type, client, tx, amount
-dispute, 1, 1,
-deposit, 1, 1, 100.0
